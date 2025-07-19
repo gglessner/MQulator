@@ -40,7 +40,7 @@ truststore = args.truststore if args.truststore else args.keystore
 password = getpass.getpass('Enter JKS password (used for both keystore and truststore): ')
 
 # JAR paths (assume same as MQulator)
-ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jr')
+ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jar')
 json_jar = os.path.abspath('./lib/json-20240303.jar')
 jms_jar = os.path.abspath('./lib/javax.jms-api-2.0.1.jar')
 

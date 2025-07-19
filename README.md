@@ -29,7 +29,7 @@ MQulator is a Python tool for browsing messages from IBM MQ queues using the IBM
 
 Place all three JARs in the `./lib/` directory as follows:
 ```
-./lib/com.ibm.mq.allclient-9.4.1.0.jr   # (rename as needed to match your version)
+./lib/com.ibm.mq.allclient-9.4.1.0.jar   # (rename as needed to match your version, must be .jar)
 ./lib/json-20240303.jar
 ./lib/javax.jms-api-2.0.1.jar
 ```
@@ -94,7 +94,7 @@ The reason code lookup table is easily extensible in the source code (`MQ_REASON
 ## Additional Tools
 
 ### MQbrowse.py
-A simple tool to browse messages from a single IBM MQ queue and log them for later replay. It connects to the specified queue and writes each raw message to a timestamped file in the `logs` directory. The log file is named with the queue and timestamp, and contains the raw, unaltered message bytes (suitable for re-injection).
+A simple tool to browse messages from a single IBM MQ queue and log them for later replay. It connects to the specified queue and writes each raw message to its own timestamped file in the `logs` directory. Each file is named with the queue, timestamp, and message number, and contains the raw, unaltered message bytes (suitable for re-injection).
 
 **Example usage:**
 ```
@@ -104,23 +104,23 @@ python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel C
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
 - Use `--ciphersuite` to override the default TLS cipher suite.
 - The tool will prompt for the JKS password.
-- Messages are logged to `logs/QUEUE1_YYYYMMDD_HHMMSS.log`.
+- Each message is logged to its own file: `logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log`.
 
 ### MQwrite.py
-A companion tool to write raw messages (as logged by MQbrowse.py) back to an IBM MQ queue. It reads a log file from the `logs` directory and writes its contents as a message to the specified queue.
+A companion tool to write raw messages (as logged by MQbrowse.py) back to an IBM MQ queue. It reads a log file from the `logs` directory and writes its contents as a message to the specified queue. You can use it to replay individual message files captured by MQbrowse.py.
 
 **Example usage:**
 ```
-python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS.log
+python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log
 ```
 
 - Use the same connection arguments as MQbrowse.py.
 - The tool will prompt for the JKS password.
-- The `--file` argument specifies the log file to replay.
+- The `--file` argument specifies the log file to replay (one message per file, as produced by MQbrowse.py).
 
 **Log File Format:**
-- Each log file contains the raw, unaltered bytes of each message, concatenated in the order they were browsed.
-- Currently, MQwrite.py writes the entire file as a single message. (Support for multiple messages per file can be added if needed.)
+- Each log file contains the raw, unaltered bytes of a single message, as produced by MQbrowse.py.
+- MQwrite.py writes the contents of the file as a single message to the queue.
 
 These tools are useful for capturing and replaying MQ traffic for testing, troubleshooting, or security research.
 
