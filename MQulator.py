@@ -74,6 +74,26 @@ from com.ibm.mq import MQQueueManager
 from com.ibm.mq.constants import CMQC
 from com.ibm.mq import MQEnvironment, MQException
 
+# IBM MQ Reason Code lookup table
+MQ_REASON_CODES = {
+    2009: "MQRC_CONNECTION_BROKEN",
+    2016: "MQRC_GET_INHIBITED",
+    2033: "MQRC_NO_MSG_AVAILABLE",
+    2035: "MQRC_NOT_AUTHORIZED",
+    2058: "MQRC_Q_MGR_NAME_ERROR",
+    2085: "MQRC_UNKNOWN_OBJECT_NAME",
+    2087: "MQRC_UNKNOWN_REMOTE_Q_MGR",
+    2119: "MQRC_NOT_OPEN_FOR_BROWSE",
+    2195: "MQRC_UNEXPECTED_ERROR",
+    2538: "MQRC_HOST_NOT_AVAILABLE",
+    2540: "MQRC_CHANNEL_CONFIG_ERROR",
+    2548: "MQRC_SSL_INITIALIZATION_ERROR",
+    2551: "MQRC_SSL_CERTIFICATE_REVOKED",
+    2552: "MQRC_SSL_PEER_NAME_MISMATCH",
+    2555: "MQRC_SSL_CERTIFICATE_REJECTED",
+    # Add more as needed
+}
+
 def try_browse(server, cert, qm, channel, queue):
     password, certfile = cert
     host, port = server.split(':')
@@ -135,6 +155,20 @@ def try_browse(server, cert, qm, channel, queue):
         return True
     except Exception as e:
         print(f"Error: {e}")
+        # Try to extract and decode MQ reason code
+        reason_code = None
+        # MQException from Java side may have reasonCode attribute
+        if hasattr(e, 'reasonCode'):
+            reason_code = e.reasonCode
+        else:
+            # Try to parse from string (e.g., 'MQJE001: Completion Code 2, Reason 2033')
+            import re
+            m = re.search(r'Reason (\d+)', str(e))
+            if m:
+                reason_code = int(m.group(1))
+        if reason_code is not None:
+            reason_text = MQ_REASON_CODES.get(reason_code, 'Unknown reason code')
+            print(f"IBM MQ Reason Code {reason_code}: {reason_text}")
         return False
 
 # Iterate all combinations

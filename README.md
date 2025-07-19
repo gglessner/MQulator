@@ -83,6 +83,12 @@ Optional:
   anotherpass|./anothercert.jks
   ```
 
+## Error Handling and Reason Code Lookup
+
+When an IBM MQ error occurs, MQulator will attempt to extract the MQ reason code from the exception and print a friendly, deciphered explanation for common codes (e.g., 2033 = MQRC_NO_MSG_AVAILABLE, 2058 = MQRC_Q_MGR_NAME_ERROR, etc.).
+
+The reason code lookup table is easily extensible in the source code (`MQ_REASON_CODES` dictionary in `MQulator.py`). If you encounter a code not listed, you can add it to the table for more descriptive error messages.
+
 ## License
 GNU General Public License v3.0 or later
 
