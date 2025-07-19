@@ -48,7 +48,7 @@ parser.add_argument('--browse-timeout', type=float, default=5.0, help='Max secon
 args = parser.parse_args()
 
 # JAR paths
-ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jr')
+ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jar')
 json_jar = os.path.abspath('./lib/json-20240303.jar')
 
 # Cipher suite
@@ -72,12 +72,13 @@ if not jpype.isJVMStarted():
 # Import Java classes
 from com.ibm.mq import MQQueueManager
 from com.ibm.mq.constants import CMQC
-from java.util import MQEnvironment, MQException
+from com.ibm.mq import MQEnvironment, MQException
 
 def try_browse(server, cert, qm, channel, queue):
     password, certfile = cert
     host, port = server.split(':')
     port = int(port)
+    print("---------------------------------------------------------------")
     print(f"Connecting: server={server}, cert={certfile}, qm={qm}, channel={channel}, queue={queue}")
     try:
         # Set up MQ environment
