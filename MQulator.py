@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # MQulator - IBM MQ browsing tool
 #
 # Author: Garland Glessner <gglessner@gmail.com>
@@ -15,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-VERSION = "1.0.0"
-
 import argparse
 import jpype
 import jpype.imports
@@ -24,6 +23,18 @@ import time
 import os
 import sys
 from itertools import product
+
+VERSION = "1.0.0"
+
+if __name__ == "__main__":
+    banner = r"""
+  __  __  ___       _      _           
+ |  \/  |/ _ \ _  _| |__ _| |_ ___ _ _ 
+ | |\/| | (_) | || | / _` |  _/ _ \ '_|
+ |_|  |_|\__\_\\_,_|_\__,_|\__\___/_|
+"""
+    print(banner)
+    print(f"Version: {VERSION}\n") 
 
 # Argument parsing
 parser = argparse.ArgumentParser(description='MQulator: IBM MQ browsing tool')
@@ -61,40 +72,35 @@ if not jpype.isJVMStarted():
 # Import Java classes
 from com.ibm.mq import MQQueueManager
 from com.ibm.mq.constants import CMQC
-from java.util import Hashtable
-
-# Helper to print status
-sep = '=' * 60
-def status(msg):
-    print(f"\n{sep}\n{msg}\n{sep}")
+from java.util import MQEnvironment, MQException
 
 def try_browse(server, cert, qm, channel, queue):
     password, certfile = cert
     host, port = server.split(':')
     port = int(port)
-    status(f"Connecting: server={server}, cert={certfile}, qm={qm}, channel={channel}, queue={queue}")
+    print(f"Connecting: server={server}, cert={certfile}, qm={qm}, channel={channel}, queue={queue}")
     try:
         # Set up MQ environment
-        props = Hashtable()
-        props.put(CMQC.CHANNEL_PROPERTY, channel)
-        props.put(CMQC.HOST_NAME_PROPERTY, host)
-        props.put(CMQC.PORT_PROPERTY, port)
-        props.put(CMQC.USER_AUTHENTICATION_MQCSP, False)
-        props.put(CMQC.TRANSPORT_PROPERTY, CMQC.TRANSPORT_MQSERIES_CLIENT)
-        props.put(CMQC.SSL_CIPHER_SUITE_PROPERTY, cipher_suite)
-        props.put(CMQC.SSL_CIPHER_SPEC_PROPERTY, cipher_suite)
-        props.put(CMQC.SSL_KEY_REPOSITORY_PROPERTY, certfile)
-        props.put(CMQC.SSL_KEY_PASSWORD_PROPERTY, password)
-        props.put(CMQC.QUEUE_MANAGER_PROPERTY, qm)
+        jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", certfile)
+        jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
+        jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", "JKS")
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", certfile)
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "JKS")
+        
+        MQEnvironment.hostname = host
+        MQEnvironment.port = port
+        MQEnvironment.channel = channel
+        MQEnvironment.sslCipherSuite = cipher_suite
 
         # Connect
-        qmgr = MQQueueManager(qm, props)
-        status(f"Connected to {qm} on {server} with channel {channel} and cert {certfile}")
+        qmgr = MQQueueManager(qm)
+        print(f"Connected to {qm} on {server} with channel {channel} and cert {certfile}")
 
         # Open queue for browse
         open_opts = CMQC.MQOO_BROWSE | CMQC.MQOO_INPUT_SHARED
         queue_obj = qmgr.accessQueue(queue, open_opts)
-        status(f"Browsing queue: {queue}")
+        print(f"Browsing queue: {queue}")
 
         # Browse all messages using BROWSE_FIRST then BROWSE_NEXT with NO_WAIT, with timeout
         msg_count = 0
@@ -124,7 +130,7 @@ def try_browse(server, cert, qm, channel, queue):
             # else, end of queue reached
         queue_obj.close()
         qmgr.disconnect()
-        status(f"Disconnected from {qm} on {server}")
+        print(f"Disconnected from {qm} on {server}")
         return True
     except Exception as e:
         print(f"Error: {e}")
@@ -134,16 +140,4 @@ def try_browse(server, cert, qm, channel, queue):
 for server, cert, qm, channel, queue in product(servers, certs, qms, channels, queues):
     try_browse(server, cert, qm, channel, queue)
 
-status("All combinations processed.") 
-
-VERSION = "1.0.0"
-
-if __name__ == "__main__":
-    banner = r"""
-  __  __  ___       _      _           
- |  \/  |/ _ \ _  _| |__ _| |_ ___ _ _ 
- | |\/| | (_) | || | / _` |  _/ _ \ '_|
- |_|  |_|\__\_\\_,_|_\__,_|\__\___/_|
-"""
-    print(banner)
-    print(f"Version: {VERSION}\n") 
+print("==========================================\nAll combinations processed.") 

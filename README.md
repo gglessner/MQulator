@@ -13,19 +13,23 @@ MQulator is a Python tool for browsing messages from IBM MQ queues using the IBM
 - Java (JRE/JDK) installed and accessible in your PATH
 - IBM MQ Java client JAR: `mq.allclient-9.4.1.0.jar`
 - JSON JAR: `json-20240303.jar`
+- JMS API JAR: `javax.jms-api-2.0.1.jar`
 - Python packages: see `requirements.txt`
 
 ## Where to get the .jar files
 - **IBM MQ allclient JAR**: Download from IBM's official site (requires IBM ID):
   - [IBM MQ Downloads](https://www.ibm.com/products/mq/downloads)
   - Look for "IBM MQ classes for Java and JMS" or "Client" package, which contains `mq.allclient-<version>.jar`.
-- **JSON JAR**: Download from the official JSON.org site or Maven Central:
+- **JSON JAR**: Download from Maven Central:
   - [https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar](https://repo1.maven.org/maven2/org/json/json/20240303/json-20240303.jar)
+- **JMS API JAR**: Download from Maven Central:
+  - [https://repo1.maven.org/maven2/javax/jms/javax.jms-api/2.0.1/javax.jms-api-2.0.1.jar](https://repo1.maven.org/maven2/javax/jms/javax.jms-api/2.0.1/javax.jms-api-2.0.1.jar)
 
-Place both JARs in the `./lib/` directory as follows:
+Place all three JARs in the `./lib/` directory as follows:
 ```
 ./lib/com.ibm.mq.allclient-9.4.1.0.jr   # (rename as needed to match your version)
 ./lib/json-20240303.jar
+./lib/javax.jms-api-2.0.1.jar
 ```
 
 ## Installation
