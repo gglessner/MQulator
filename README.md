@@ -2,6 +2,8 @@
 
 MQulator is a Python tool for browsing messages from IBM MQ queues using the IBM MQ Java client via JPype. It iterates through all combinations of servers, queue managers, channels, queues, and TLS certificates, connecting to each and displaying any messages found.
 
+**In the spirit of Joe Grand's [JTAGulator](https://www.grandideastudio.com/jtagulator/), which tries all wiring combinations to identify JTAG, TTL serial, I2C, or SPI ports on hardware, MQulator is designed for security testers who may not be completely sure which IBM MQ settings belong together. It automates the process of trying all possible combinations to help identify valid connection parameters.**
+
 ## Features
 - Connects to IBM MQ using Java client libraries
 - Supports TLS with JKS certificates
