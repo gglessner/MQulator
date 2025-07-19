@@ -91,6 +91,39 @@ When an IBM MQ error occurs, MQulator will attempt to extract the MQ reason code
 
 The reason code lookup table is easily extensible in the source code (`MQ_REASON_CODES` dictionary in `MQulator.py`). If you encounter a code not listed, you can add it to the table for more descriptive error messages.
 
+## Additional Tools
+
+### MQbrowse.py
+A simple tool to browse messages from a single IBM MQ queue and log them for later replay. It connects to the specified queue and writes each raw message to a timestamped file in the `logs` directory. The log file is named with the queue and timestamp, and contains the raw, unaltered message bytes (suitable for re-injection).
+
+**Example usage:**
+```
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
+```
+
+- Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
+- Use `--ciphersuite` to override the default TLS cipher suite.
+- The tool will prompt for the JKS password.
+- Messages are logged to `logs/QUEUE1_YYYYMMDD_HHMMSS.log`.
+
+### MQwrite.py
+A companion tool to write raw messages (as logged by MQbrowse.py) back to an IBM MQ queue. It reads a log file from the `logs` directory and writes its contents as a message to the specified queue.
+
+**Example usage:**
+```
+python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS.log
+```
+
+- Use the same connection arguments as MQbrowse.py.
+- The tool will prompt for the JKS password.
+- The `--file` argument specifies the log file to replay.
+
+**Log File Format:**
+- Each log file contains the raw, unaltered bytes of each message, concatenated in the order they were browsed.
+- Currently, MQwrite.py writes the entire file as a single message. (Support for multiple messages per file can be added if needed.)
+
+These tools are useful for capturing and replaying MQ traffic for testing, troubleshooting, or security research.
+
 ## License
 GNU General Public License v3.0 or later
 
