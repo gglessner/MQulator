@@ -98,16 +98,23 @@ def try_browse(server, cert, qm, channel, queue):
     password, certfile = cert
     host, port = server.split(':')
     port = int(port)
+    
+    # Detect keystore type from file extension
+    if certfile.lower().endswith(('.pfx', '.p12')):
+        keystore_type = "PKCS12"
+    else:
+        keystore_type = "JKS"
+    
     print("---------------------------------------------------------------")
-    print(f"Connecting: server={server}, cert={certfile}, qm={qm}, channel={channel}, queue={queue}")
+    print(f"Connecting: server={server}, cert={certfile} ({keystore_type}), qm={qm}, channel={channel}, queue={queue}")
     try:
         # Set up MQ environment
         jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", certfile)
         jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
-        jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", "JKS")
+        jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", keystore_type)
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", certfile)
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
-        jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "JKS")
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", keystore_type)
         
         MQEnvironment.hostname = host
         MQEnvironment.port = port

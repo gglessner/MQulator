@@ -27,8 +27,9 @@ import datetime
 
 # Argument parsing
 parser = argparse.ArgumentParser(description='MQbrowse: Simple IBM MQ queue browser')
-parser.add_argument('--keystore', required=True, help='Path to JKS keystore file')
-parser.add_argument('--truststore', help='Path to JKS truststore file (defaults to keystore if not provided)')
+parser.add_argument('--keystore', required=True, help='Path to JKS or PFX keystore file')
+parser.add_argument('--truststore', help='Path to JKS or PFX truststore file (defaults to keystore if not provided)')
+parser.add_argument('--keystoretype', default='JKS', choices=['JKS', 'PKCS12'], help='Keystore type: JKS or PKCS12 (default: JKS)')
 parser.add_argument('--server', required=True, help='Server in host:port format')
 parser.add_argument('--qm', required=True, help='Queue manager name')
 parser.add_argument('--channel', required=True, help='Channel name')
@@ -39,7 +40,7 @@ args = parser.parse_args()
 # Use keystore as truststore if not provided
 truststore = args.truststore if args.truststore else args.keystore
 
-password = getpass.getpass('Enter JKS password (used for both keystore and truststore): ')
+password = getpass.getpass(f'Enter {args.keystoretype} password (used for both keystore and truststore): ')
 
 # JAR paths (assume same as MQulator)
 ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jar')
@@ -60,10 +61,10 @@ port = int(port)
 # Set up Java SSL properties
 jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", args.keystore)
 jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
-jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", "JKS")
+jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", args.keystoretype)
 jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
 jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
-jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "JKS")
+jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
 
 # Set up MQ environment
 MQEnvironment.hostname = host
