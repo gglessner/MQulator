@@ -34,6 +34,7 @@ parser.add_argument('--queue', required=True, help='Queue name')
 parser.add_argument('--ciphersuite', default='TLS_RSA_WITH_AES_256_CBC_SHA256', help='TLS cipher suite (default: TLS_RSA_WITH_AES_256_CBC_SHA256)')
 parser.add_argument('--file', required=True, help='File containing raw messages to write (as produced by MQbrowse.py)')
 parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handshake debugging (verbose output)')
+parser.add_argument('--disable-cert-verification', action='store_true', help='Disable server certificate verification (use with caution)')
 args = parser.parse_args()
 
 # Use keystore as truststore if not provided
@@ -78,6 +79,74 @@ if args.debug_tls:
     print("Enabling TLS handshake debugging...")
     jpype.java.lang.System.setProperty("javax.net.debug", "ssl,handshake")
     jpype.java.lang.System.setProperty("com.ibm.ssl.debug", "true")
+
+# Disable certificate verification if requested
+if args.disable_cert_verification:
+    print("WARNING: Disabling server certificate verification - use with caution!")
+    
+    # Create a custom trust manager that accepts all certificates
+    try:
+        # Import required Java classes for custom trust manager
+        TrustManager = jpype.JClass('javax.net.ssl.TrustManager')
+        X509TrustManager = jpype.JClass('javax.net.ssl.X509TrustManager')
+        SSLContext = jpype.JClass('javax.net.ssl.SSLContext')
+        
+        # Define a custom trust manager that accepts all certificates
+        @jpype.JImplements(X509TrustManager)
+        class AcceptAllTrustManager:
+            @jpype.JOverride
+            def checkClientTrusted(self, chain, authType):
+                pass
+            
+            @jpype.JOverride
+            def checkServerTrusted(self, chain, authType):
+                pass
+            
+            @jpype.JOverride
+            def getAcceptedIssuers(self):
+                return jpype.JArray(jpype.JClass('java.security.cert.X509Certificate'))(0)
+        
+        # Create and install the custom trust manager
+        trust_manager = AcceptAllTrustManager()
+        trust_managers = jpype.JArray(TrustManager)([trust_manager])
+        
+        ssl_context = SSLContext.getInstance("TLS")
+        ssl_context.init(None, trust_managers, None)
+        SSLContext.setDefault(ssl_context)
+        
+        # Make MQ actually use it:
+        from com.ibm.mq import MQEnvironment
+        MQEnvironment.sslSocketFactory = ssl_context.getSocketFactory()
+
+        print("Custom trust-all manager installed successfully")
+        
+        # Additional IBM MQ specific certificate bypass properties
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableCertificateValidation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.skipCertificateValidation", "true")
+        jpype.java.lang.System.setProperty("com.ibm.mq.ssl.validateCertificate", "false")
+        
+        # Disable PKIX path validation
+        jpype.java.lang.System.setProperty("com.sun.net.ssl.checkRevocation", "false")
+        jpype.java.lang.System.setProperty("com.sun.security.enableCRLDP", "false")
+        jpype.java.lang.System.setProperty("ocsp.enable", "false")
+        
+    except Exception as e:
+        print(f"Failed to create custom trust manager: {e}")
+        # Fallback to property-based approach with all bypass properties
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableCertificateValidation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.skipCertificateValidation", "true")
+        jpype.java.lang.System.setProperty("com.ibm.mq.ssl.validateCertificate", "false")
+        jpype.java.lang.System.setProperty("com.sun.net.ssl.checkRevocation", "false")
+        jpype.java.lang.System.setProperty("com.sun.security.enableCRLDP", "false")
+        jpype.java.lang.System.setProperty("ocsp.enable", "false")
 
 # Set up MQ environment
 MQEnvironment.hostname = host

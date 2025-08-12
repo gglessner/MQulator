@@ -64,6 +64,7 @@ python MQulator.py --servers server.txt --qms qm.txt --channels channel.txt --qu
 Optional:
 - `--cipher <CIPHER_SUITE>`: Override the default TLS cipher suite.
 - `--debug-tls`: Enable TLS handshake debugging (verbose output for troubleshooting SSL/TLS issues).
+- `--disable-cert-verification`: Disable server certificate verification (use with caution for testing).
 
 ## Example Input File Formats
 - **server.txt**
@@ -117,13 +118,21 @@ python MQbrowse.py --keystore mycert.pfx --keystoretype PKCS12 --server host:por
 
 # PEM keystore
 python MQbrowse.py --keystore mycert.pem --keystoretype PEM --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
+
+# TLS without client certificate
+python MQbrowse.py --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
+
+# Disable certificate verification (for testing with self-signed certs)
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --disable-cert-verification
 ```
 
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--ciphersuite` to override the default TLS cipher suite.
 - Use `--debug-tls` to enable verbose TLS handshake debugging for troubleshooting connection issues.
+- Use `--disable-cert-verification` to bypass server certificate validation (useful for testing with self-signed certs).
 - The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
+- The `--keystore` argument is optional - omit it for TLS without client certificate authentication.
 - Each message is logged to its own file: `logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log`.
 
 ### MQwrite.py
@@ -139,17 +148,40 @@ python MQwrite.py --keystore mycert.pfx --keystoretype PKCS12 --server host:port
 
 # PEM keystore
 python MQwrite.py --keystore mycert.pem --keystoretype PEM --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log
+
+# Disable certificate verification (for testing with self-signed certs)
+python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/message.log --disable-cert-verification
 ```
 
 - Use the same connection arguments as MQbrowse.py.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--debug-tls` to enable verbose TLS handshake debugging for troubleshooting connection issues.
+- Use `--disable-cert-verification` to bypass server certificate validation (useful for testing with self-signed certs).
 - The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
 - The `--file` argument specifies the log file to replay (one message per file, as produced by MQbrowse.py).
 
 **Log File Format:**
 - Each log file contains the raw, unaltered bytes of a single message, as produced by MQbrowse.py.
 - MQwrite.py writes the contents of the file as a single message to the queue.
+
+## Troubleshooting TLS/SSL Issues
+
+All tools include comprehensive TLS debugging and certificate bypass options:
+
+- **`--debug-tls`**: Enables verbose SSL/TLS handshake debugging output to diagnose connection issues
+- **`--disable-cert-verification`**: Bypasses all server certificate validation (useful for testing with self-signed certificates or untrusted CAs)
+
+**Common TLS troubleshooting scenarios:**
+```bash
+# Debug TLS handshake issues
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --debug-tls
+
+# Test with self-signed certificates
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --disable-cert-verification
+
+# Combine debugging with certificate bypass
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --debug-tls --disable-cert-verification
+```
 
 These tools are useful for capturing and replaying MQ traffic for testing, troubleshooting, or security research.
 
