@@ -56,7 +56,15 @@ jms_jar = os.path.abspath('./lib/javax.jms-api-2.0.1.jar')
 
 # Start JVM if not already started
 if not jpype.isJVMStarted():
-    jpype.startJVM(classpath=[ibm_mq_jar, json_jar, jms_jar])
+    # Add additional JVM args for certificate bypass if needed
+    jvm_args = []
+    if len([arg for arg in sys.argv if '--disable-cert-verification' in arg]) > 0:
+        jvm_args.extend([
+            '-Dcom.ibm.ssl.enableSignerExchangePrompt=false',
+            '-Dcom.ibm.ssl.performURLHostnameVerification=false',
+            '-Dtrust_all_cert=true'
+        ])
+    jpype.startJVM(classpath=[ibm_mq_jar, json_jar, jms_jar], *jvm_args)
 
 from com.ibm.mq import MQQueueManager
 from com.ibm.mq.constants import CMQC
@@ -85,10 +93,22 @@ if args.debug_tls:
 # Disable certificate verification if requested
 if args.disable_cert_verification:
     print("WARNING: Disabling server certificate verification - use with caution!")
-    jpype.java.lang.System.setProperty("com.ibm.ssl.trustManager", "com.ibm.ssl.TrustManagerExtended")
-    jpype.java.lang.System.setProperty("com.ibm.ssl.trustStoreType", "NONE")
+    # Disable standard Java SSL verification
     jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", "")
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", "")
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "")
+    # Disable IBM MQ SSL verification
+    jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
+    # Use a permissive trust manager
     jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "NONE")
+else:
+    # Normal operation - restore truststore settings if they were cleared
+    if args.keystoretype != "PEM":
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
 
 # Set up MQ environment
 MQEnvironment.hostname = host
