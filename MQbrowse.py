@@ -145,6 +145,10 @@ if args.disable_cert_verification:
         ssl_context.init(None, trust_managers, None)
         SSLContext.setDefault(ssl_context)
         
+        # Make MQ actually use it:
+        from com.ibm.mq import MQEnvironment
+        MQEnvironment.sslSocketFactory = ssl_context.getSocketFactory()
+
         print("Custom trust-all manager installed successfully")
         
         # Additional IBM MQ specific certificate bypass properties
