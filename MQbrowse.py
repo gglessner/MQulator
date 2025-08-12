@@ -77,6 +77,120 @@ from com.ibm.mq import MQQueueManager
 from com.ibm.mq.constants import CMQC
 from com.ibm.mq import MQEnvironment
 
+# IBM MQ Reason Code lookup table
+MQ_REASON_CODES = {
+    # Connection and communication errors
+    2009: "MQRC_CONNECTION_BROKEN",
+    2059: "MQRC_Q_MGR_NOT_AVAILABLE",
+    2538: "MQRC_HOST_NOT_AVAILABLE",
+    2540: "MQRC_CHANNEL_CONFIG_ERROR",
+    2087: "MQRC_UNKNOWN_REMOTE_Q_MGR",
+    
+    # Authentication and authorization errors
+    2035: "MQRC_NOT_AUTHORIZED",
+    2089: "MQRC_SECURITY_ERROR",
+    
+    # Queue manager errors
+    2058: "MQRC_Q_MGR_NAME_ERROR",
+    2071: "MQRC_Q_MGR_STOPPING",
+    2072: "MQRC_Q_MGR_QUIESCING",
+    
+    # Queue and object errors
+    2085: "MQRC_UNKNOWN_OBJECT_NAME",
+    2082: "MQRC_UNKNOWN_ALIAS_BASE_Q",
+    2041: "MQRC_OBJECT_IN_USE",
+    2393: "MQRC_OBJECT_ALREADY_EXISTS",
+    2397: "MQRC_OBJECT_TYPE_ERROR",
+    
+    # Message operations
+    2016: "MQRC_GET_INHIBITED",
+    2019: "MQRC_PUT_INHIBITED",
+    2033: "MQRC_NO_MSG_AVAILABLE",
+    2051: "MQRC_PUT_NOT_ALLOWED",
+    2052: "MQRC_GET_NOT_ALLOWED",
+    2053: "MQRC_BROWSE_NOT_ALLOWED",
+    2119: "MQRC_NOT_OPEN_FOR_BROWSE",
+    
+    # Message size errors
+    2030: "MQRC_MSG_TOO_BIG_FOR_Q",
+    2031: "MQRC_MSG_TOO_BIG_FOR_Q_MGR",
+    2020: "MQRC_MSG_TOO_BIG_FOR_CHANNEL",
+    
+    # SSL/TLS errors
+    2548: "MQRC_SSL_INITIALIZATION_ERROR",
+    2551: "MQRC_SSL_CERTIFICATE_REVOKED",
+    2552: "MQRC_SSL_PEER_NAME_MISMATCH",
+    2555: "MQRC_SSL_CERTIFICATE_REJECTED",
+    
+    # System and resource errors
+    2069: "MQRC_STORAGE_NOT_AVAILABLE",
+    2024: "MQRC_SYNCPOINT_LIMIT_REACHED",
+    2195: "MQRC_UNEXPECTED_ERROR",
+    
+    # Additional common error codes
+    2001: "MQRC_ALIAS_BASE_Q_TYPE_ERROR",
+    2003: "MQRC_ALREADY_CONNECTED",
+    2004: "MQRC_BUFFER_ERROR",
+    2005: "MQRC_BUFFER_LENGTH_ERROR",
+    2006: "MQRC_CHAR_ATTR_LENGTH_ERROR",
+    2007: "MQRC_CHAR_ATTRS_ERROR",
+    2008: "MQRC_CHAR_ATTRS_TOO_SHORT",
+    2010: "MQRC_CONNECTION_QUIESCING",
+    2012: "MQRC_DATA_LENGTH_ERROR",
+    2017: "MQRC_ENVIRONMENT_ERROR",
+    2018: "MQRC_EXPIRY_ERROR",
+    2022: "MQRC_FORMAT_ERROR",
+    2025: "MQRC_HANDLE_NOT_AVAILABLE",
+    2026: "MQRC_HANDLE_IN_USE",
+    2027: "MQRC_HCONN_ERROR",
+    2028: "MQRC_HOBJ_ERROR",
+    2029: "MQRC_INHIBIT_VALUE_ERROR",
+    2034: "MQRC_MD_ERROR",
+    2036: "MQRC_NOT_OPEN_FOR_INPUT",
+    2037: "MQRC_NOT_OPEN_FOR_INQUIRE",
+    2038: "MQRC_NOT_OPEN_FOR_OUTPUT",
+    2039: "MQRC_NOT_OPEN_FOR_SET",
+    2040: "MQRC_OBJECT_CHANGED",
+    2043: "MQRC_OPTION_NOT_VALID_FOR_TYPE",
+    2044: "MQRC_OPTIONS_ERROR",
+    2045: "MQRC_PERSISTENCE_ERROR",
+    2046: "MQRC_PERSISTENT_NOT_ALLOWED",
+    2047: "MQRC_PRIORITY_EXCEEDS_MAXIMUM",
+    2048: "MQRC_PRIORITY_ERROR",
+    2049: "MQRC_PUT_MSG_OPTS_ERROR",
+    2050: "MQRC_Q_DELETED",
+    2054: "MQRC_Q_FULL",
+    2055: "MQRC_Q_NOT_EMPTY",
+    2056: "MQRC_Q_SPACE_NOT_AVAILABLE",
+    2057: "MQRC_Q_TYPE_ERROR",
+    2061: "MQRC_REPORT_OPTIONS_ERROR",
+    2062: "MQRC_SECOND_MARK_NOT_ALLOWED",
+    2063: "MQRC_SECURITY_ERROR",
+    2065: "MQRC_SELECTOR_COUNT_ERROR",
+    2066: "MQRC_SELECTOR_LIMIT_EXCEEDED",
+    2067: "MQRC_SELECTOR_ERROR",
+    2068: "MQRC_SELECTOR_NOT_FOR_TYPE",
+    2070: "MQRC_SOURCE_CCSID_ERROR",
+    2073: "MQRC_TARGET_CCSID_ERROR",
+    2074: "MQRC_TRUNCATED_MSG_ACCEPTED",
+    2075: "MQRC_TRUNCATED_MSG_FAILED",
+    2076: "MQRC_UNKNOWN_OBJECT_TYPE",
+    2077: "MQRC_UNKNOWN_REPORT_OPTION",
+    2078: "MQRC_WAIT_INTERVAL_ERROR",
+    2079: "MQRC_XMIT_Q_TYPE_ERROR",
+    2080: "MQRC_XMIT_Q_USAGE_ERROR",
+    2081: "MQRC_NOT_OPEN_FOR_PASS_ALL",
+    2083: "MQRC_UNKNOWN_DEF_XMIT_Q",
+    2084: "MQRC_DEF_XMIT_Q_TYPE_ERROR",
+    2086: "MQRC_DEF_XMIT_Q_USAGE_ERROR",
+    2088: "MQRC_NAME_IN_USE",
+    2090: "MQRC_CONNECTION_QUIESCING",
+    2091: "MQRC_CONNECTION_SHUTTING_DOWN",
+    2092: "MQRC_INVALID_LOG_TYPE",
+    2093: "MQRC_INVALID_MEDIA_RECOVERY",
+    2094: "MQRC_INVALID_RESTART_TYPE"
+}
+
 host, port = args.server.split(':')
 port = int(port)
 
@@ -232,6 +346,20 @@ except KeyboardInterrupt:
     print("\nExiting on user request.")
 except Exception as e:
     print(f"Error: {e}")
+    # Try to extract and decode MQ reason code
+    reason_code = None
+    # MQException from Java side may have reasonCode attribute
+    if hasattr(e, 'reasonCode'):
+        reason_code = e.reasonCode
+    else:
+        # Try to parse from string (e.g., 'MQJE001: Completion Code 2, Reason 2033')
+        import re
+        m = re.search(r'Reason (\d+)', str(e))
+        if m:
+            reason_code = int(m.group(1))
+    if reason_code is not None:
+        reason_text = MQ_REASON_CODES.get(reason_code, 'Unknown reason code')
+        print(f"IBM MQ Reason Code {reason_code}: {reason_text}")
 finally:
     try:
         # The original code had log_file.close() here, but log_file is not defined in this scope.
