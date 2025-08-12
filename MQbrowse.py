@@ -126,13 +126,33 @@ if args.disable_cert_verification:
         
         print("Custom trust-all manager installed successfully")
         
-    except Exception as e:
-        print(f"Failed to create custom trust manager: {e}")
-        # Fallback to property-based approach
+        # Additional IBM MQ specific certificate bypass properties
         jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
         jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
         jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
         jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableCertificateValidation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.skipCertificateValidation", "true")
+        jpype.java.lang.System.setProperty("com.ibm.mq.ssl.validateCertificate", "false")
+        
+        # Disable PKIX path validation
+        jpype.java.lang.System.setProperty("com.sun.net.ssl.checkRevocation", "false")
+        jpype.java.lang.System.setProperty("com.sun.security.enableCRLDP", "false")
+        jpype.java.lang.System.setProperty("ocsp.enable", "false")
+        
+    except Exception as e:
+        print(f"Failed to create custom trust manager: {e}")
+        # Fallback to property-based approach with all bypass properties
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableCertificateValidation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.skipCertificateValidation", "true")
+        jpype.java.lang.System.setProperty("com.ibm.mq.ssl.validateCertificate", "false")
+        jpype.java.lang.System.setProperty("com.sun.net.ssl.checkRevocation", "false")
+        jpype.java.lang.System.setProperty("com.sun.security.enableCRLDP", "false")
+        jpype.java.lang.System.setProperty("ocsp.enable", "false")
         
 else:
     # Normal operation - ensure truststore is properly set
