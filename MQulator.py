@@ -112,11 +112,14 @@ def try_browse(server, cert, qm, channel, queue):
     try:
         # Set up MQ environment
         jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", certfile)
-        jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
         jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", keystore_type)
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", certfile)
-        jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", keystore_type)
+        
+        # Only set passwords for non-PEM keystores
+        if keystore_type != "PEM":
+            jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
+            jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
         
         MQEnvironment.hostname = host
         MQEnvironment.port = port

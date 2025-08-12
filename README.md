@@ -31,6 +31,7 @@ MQulator is a Python tool for browsing messages from IBM MQ queues using the IBM
 All tools support JKS, PFX (PKCS12), and PEM certificate formats:
 - **MQulator**: Automatically detects keystore type based on file extension (.jks, .pfx, .p12, .pem)
 - **MQbrowse/MQwrite**: Use `--keystoretype` argument to specify JKS, PKCS12, or PEM (defaults to JKS)
+- **PEM files**: No password required (password prompts are skipped for PEM keystores)
 
 Place all three JARs in the `./lib/` directory as follows:
 ```
@@ -90,8 +91,9 @@ Optional:
   anotherpass|./anothercert.jks
   pfxpassword|./mycert.pfx
   p12password|./mycert.p12
-  pempassword|./mycert.pem
+  |./mycert.pem
   ```
+  Note: For PEM files, leave the password field empty (just use `|./file.pem`)
 
 ## Error Handling and Reason Code Lookup
 
@@ -119,7 +121,7 @@ python MQbrowse.py --keystore mycert.pem --keystoretype PEM --server host:port -
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--ciphersuite` to override the default TLS cipher suite.
-- The tool will prompt for the keystore password.
+- The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
 - Each message is logged to its own file: `logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log`.
 
 ### MQwrite.py
@@ -139,7 +141,7 @@ python MQwrite.py --keystore mycert.pem --keystoretype PEM --server host:port --
 
 - Use the same connection arguments as MQbrowse.py.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
-- The tool will prompt for the keystore password.
+- The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
 - The `--file` argument specifies the log file to replay (one message per file, as produced by MQbrowse.py).
 
 **Log File Format:**

@@ -40,7 +40,12 @@ args = parser.parse_args()
 # Use keystore as truststore if not provided
 truststore = args.truststore if args.truststore else args.keystore
 
-password = getpass.getpass(f'Enter {args.keystoretype} password (used for both keystore and truststore): ')
+# Only prompt for password if not using PEM
+if args.keystoretype == 'PEM':
+    password = None
+    print("Using PEM keystore (no password required)")
+else:
+    password = getpass.getpass(f'Enter {args.keystoretype} password (used for both keystore and truststore): ')
 
 # JAR paths (assume same as MQulator)
 ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jar')
@@ -60,11 +65,14 @@ port = int(port)
 
 # Set up Java SSL properties
 jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", args.keystore)
-jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
 jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", args.keystoretype)
 jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
-jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
 jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
+
+# Only set passwords for non-PEM keystores
+if args.keystoretype != "PEM":
+    jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
 
 # Set up MQ environment
 MQEnvironment.hostname = host
