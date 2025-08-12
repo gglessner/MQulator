@@ -33,6 +33,7 @@ parser.add_argument('--channel', required=True, help='Channel name')
 parser.add_argument('--queue', required=True, help='Queue name')
 parser.add_argument('--ciphersuite', default='TLS_RSA_WITH_AES_256_CBC_SHA256', help='TLS cipher suite (default: TLS_RSA_WITH_AES_256_CBC_SHA256)')
 parser.add_argument('--file', required=True, help='File containing raw messages to write (as produced by MQbrowse.py)')
+parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handshake debugging (verbose output)')
 args = parser.parse_args()
 
 # Use keystore as truststore if not provided
@@ -71,6 +72,12 @@ jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystore
 if args.keystoretype != "PEM":
     jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
     jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
+
+# Enable TLS debugging if requested
+if args.debug_tls:
+    print("Enabling TLS handshake debugging...")
+    jpype.java.lang.System.setProperty("javax.net.debug", "ssl,handshake")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.debug", "true")
 
 # Set up MQ environment
 MQEnvironment.hostname = host

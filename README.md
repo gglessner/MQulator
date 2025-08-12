@@ -63,6 +63,7 @@ python MQulator.py --servers server.txt --qms qm.txt --channels channel.txt --qu
 
 Optional:
 - `--cipher <CIPHER_SUITE>`: Override the default TLS cipher suite.
+- `--debug-tls`: Enable TLS handshake debugging (verbose output for troubleshooting SSL/TLS issues).
 
 ## Example Input File Formats
 - **server.txt**
@@ -121,6 +122,7 @@ python MQbrowse.py --keystore mycert.pem --keystoretype PEM --server host:port -
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--ciphersuite` to override the default TLS cipher suite.
+- Use `--debug-tls` to enable verbose TLS handshake debugging for troubleshooting connection issues.
 - The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
 - Each message is logged to its own file: `logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log`.
 
@@ -141,6 +143,7 @@ python MQwrite.py --keystore mycert.pem --keystoretype PEM --server host:port --
 
 - Use the same connection arguments as MQbrowse.py.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
+- Use `--debug-tls` to enable verbose TLS handshake debugging for troubleshooting connection issues.
 - The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
 - The `--file` argument specifies the log file to replay (one message per file, as produced by MQbrowse.py).
 

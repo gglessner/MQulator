@@ -45,6 +45,7 @@ parser.add_argument('--queues', required=True, help='Path to queue.txt')
 parser.add_argument('--certs', required=True, help='Path to certs.txt')
 parser.add_argument('--cipher', default='TLS_RSA_WITH_AES_256_CBC_SHA256', help='Cipher suite for TLS (default: TLS_RSA_WITH_AES_256_CBC_SHA256)')
 parser.add_argument('--browse-timeout', type=float, default=5.0, help='Max seconds to browse each queue (default: 5.0)')
+parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handshake debugging (verbose output)')
 args = parser.parse_args()
 
 # JAR paths
@@ -68,6 +69,12 @@ certs = [tuple(line.split('|', 1)) for line in read_lines(args.certs)]
 # Start JVM if not already started
 if not jpype.isJVMStarted():
     jpype.startJVM(classpath=[ibm_mq_jar, json_jar])
+
+# Enable TLS debugging if requested
+if args.debug_tls:
+    print("Enabling TLS handshake debugging...")
+    jpype.java.lang.System.setProperty("javax.net.debug", "ssl,handshake")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.debug", "true")
 
 # Import Java classes
 from com.ibm.mq import MQQueueManager
