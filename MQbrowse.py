@@ -36,6 +36,7 @@ parser.add_argument('--channel', required=True, help='Channel name')
 parser.add_argument('--queue', required=True, help='Queue name')
 parser.add_argument('--ciphersuite', default='TLS_RSA_WITH_AES_256_CBC_SHA256', help='TLS cipher suite (default: TLS_RSA_WITH_AES_256_CBC_SHA256)')
 parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handshake debugging (verbose output)')
+parser.add_argument('--disable-cert-verification', action='store_true', help='Disable server certificate verification (use with caution)')
 args = parser.parse_args()
 
 # Use keystore as truststore if not provided
@@ -80,6 +81,14 @@ if args.debug_tls:
     print("Enabling TLS handshake debugging...")
     jpype.java.lang.System.setProperty("javax.net.debug", "ssl,handshake")
     jpype.java.lang.System.setProperty("com.ibm.ssl.debug", "true")
+
+# Disable certificate verification if requested
+if args.disable_cert_verification:
+    print("WARNING: Disabling server certificate verification - use with caution!")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.trustManager", "com.ibm.ssl.TrustManagerExtended")
+    jpype.java.lang.System.setProperty("com.ibm.ssl.trustStoreType", "NONE")
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", "")
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "NONE")
 
 # Set up MQ environment
 MQEnvironment.hostname = host
