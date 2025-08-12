@@ -102,6 +102,8 @@ def try_browse(server, cert, qm, channel, queue):
     # Detect keystore type from file extension
     if certfile.lower().endswith(('.pfx', '.p12')):
         keystore_type = "PKCS12"
+    elif certfile.lower().endswith('.pem'):
+        keystore_type = "PEM"
     else:
         keystore_type = "JKS"
     

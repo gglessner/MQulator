@@ -28,9 +28,9 @@ MQulator is a Python tool for browsing messages from IBM MQ queues using the IBM
   - [https://repo1.maven.org/maven2/javax/jms/javax.jms-api/2.0.1/javax.jms-api-2.0.1.jar](https://repo1.maven.org/maven2/javax/jms/javax.jms-api/2.0.1/javax.jms-api-2.0.1.jar)
 
 ## Certificate Support
-All tools support both JKS and PFX (PKCS12) certificate formats:
-- **MQulator**: Automatically detects keystore type based on file extension (.jks, .pfx, .p12)
-- **MQbrowse/MQwrite**: Use `--keystoretype` argument to specify JKS or PKCS12 (defaults to JKS)
+All tools support JKS, PFX (PKCS12), and PEM certificate formats:
+- **MQulator**: Automatically detects keystore type based on file extension (.jks, .pfx, .p12, .pem)
+- **MQbrowse/MQwrite**: Use `--keystoretype` argument to specify JKS, PKCS12, or PEM (defaults to JKS)
 
 Place all three JARs in the `./lib/` directory as follows:
 ```
@@ -90,6 +90,7 @@ Optional:
   anotherpass|./anothercert.jks
   pfxpassword|./mycert.pfx
   p12password|./mycert.p12
+  pempassword|./mycert.pem
   ```
 
 ## Error Handling and Reason Code Lookup
@@ -110,10 +111,13 @@ python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel C
 
 # PFX keystore
 python MQbrowse.py --keystore mycert.pfx --keystoretype PKCS12 --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
+
+# PEM keystore
+python MQbrowse.py --keystore mycert.pem --keystoretype PEM --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
 ```
 
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
-- Use `--keystoretype PKCS12` for PFX/P12 files, or `JKS` for JKS files (default).
+- Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--ciphersuite` to override the default TLS cipher suite.
 - The tool will prompt for the keystore password.
 - Each message is logged to its own file: `logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log`.
@@ -128,10 +132,13 @@ python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CH
 
 # PFX keystore
 python MQwrite.py --keystore mycert.pfx --keystoretype PKCS12 --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log
+
+# PEM keystore
+python MQwrite.py --keystore mycert.pem --keystoretype PEM --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log
 ```
 
 - Use the same connection arguments as MQbrowse.py.
-- Use `--keystoretype PKCS12` for PFX/P12 files, or `JKS` for JKS files (default).
+- Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - The tool will prompt for the keystore password.
 - The `--file` argument specifies the log file to replay (one message per file, as produced by MQbrowse.py).
 

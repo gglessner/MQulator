@@ -24,9 +24,9 @@ import sys
 import getpass
 
 parser = argparse.ArgumentParser(description='MQwrite: Write raw messages from a file to an IBM MQ queue')
-parser.add_argument('--keystore', required=True, help='Path to JKS or PFX keystore file')
-parser.add_argument('--truststore', help='Path to JKS or PFX truststore file (defaults to keystore if not provided)')
-parser.add_argument('--keystoretype', default='JKS', choices=['JKS', 'PKCS12'], help='Keystore type: JKS or PKCS12 (default: JKS)')
+parser.add_argument('--keystore', required=True, help='Path to JKS, PFX, or PEM keystore file')
+parser.add_argument('--truststore', help='Path to JKS, PFX, or PEM truststore file (defaults to keystore if not provided)')
+parser.add_argument('--keystoretype', default='JKS', choices=['JKS', 'PKCS12', 'PEM'], help='Keystore type: JKS, PKCS12, or PEM (default: JKS)')
 parser.add_argument('--server', required=True, help='Server in host:port format')
 parser.add_argument('--qm', required=True, help='Queue manager name')
 parser.add_argument('--channel', required=True, help='Channel name')
