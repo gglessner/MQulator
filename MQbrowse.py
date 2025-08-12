@@ -93,19 +93,49 @@ if args.debug_tls:
 # Disable certificate verification if requested
 if args.disable_cert_verification:
     print("WARNING: Disabling server certificate verification - use with caution!")
-    # Disable standard Java SSL verification
-    jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", "")
-    jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", "")
-    jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "")
-    # Disable IBM MQ SSL verification
-    jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
-    jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
-    jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
-    jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
-    # Use a permissive trust manager
-    jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", "NONE")
+    
+    # Create a custom trust manager that accepts all certificates
+    try:
+        # Import required Java classes for custom trust manager
+        TrustManager = jpype.JClass('javax.net.ssl.TrustManager')
+        X509TrustManager = jpype.JClass('javax.net.ssl.X509TrustManager')
+        SSLContext = jpype.JClass('javax.net.ssl.SSLContext')
+        
+        # Define a custom trust manager that accepts all certificates
+        @jpype.JImplements(X509TrustManager)
+        class AcceptAllTrustManager:
+            @jpype.JOverride
+            def checkClientTrusted(self, chain, authType):
+                pass
+            
+            @jpype.JOverride
+            def checkServerTrusted(self, chain, authType):
+                pass
+            
+            @jpype.JOverride
+            def getAcceptedIssuers(self):
+                return jpype.JArray(jpype.JClass('java.security.cert.X509Certificate'))(0)
+        
+        # Create and install the custom trust manager
+        trust_manager = AcceptAllTrustManager()
+        trust_managers = jpype.JArray(TrustManager)([trust_manager])
+        
+        ssl_context = SSLContext.getInstance("TLS")
+        ssl_context.init(None, trust_managers, None)
+        SSLContext.setDefault(ssl_context)
+        
+        print("Custom trust-all manager installed successfully")
+        
+    except Exception as e:
+        print(f"Failed to create custom trust manager: {e}")
+        # Fallback to property-based approach
+        jpype.java.lang.System.setProperty("com.ibm.ssl.enableSignerExchangePrompt", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.performURLHostnameVerification", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.checkCertificateRevocation", "false")
+        jpype.java.lang.System.setProperty("com.ibm.ssl.trustDefaultCerts", "true")
+        
 else:
-    # Normal operation - restore truststore settings if they were cleared
+    # Normal operation - ensure truststore is properly set
     if args.keystoretype != "PEM":
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
