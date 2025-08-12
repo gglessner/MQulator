@@ -27,7 +27,7 @@ import datetime
 
 # Argument parsing
 parser = argparse.ArgumentParser(description='MQbrowse: Simple IBM MQ queue browser')
-parser.add_argument('--keystore', required=True, help='Path to JKS, PFX, or PEM keystore file')
+parser.add_argument('--keystore', help='Path to JKS, PFX, or PEM keystore file (optional - omit for TLS without client cert)')
 parser.add_argument('--truststore', help='Path to JKS, PFX, or PEM truststore file (defaults to keystore if not provided)')
 parser.add_argument('--keystoretype', default='JKS', choices=['JKS', 'PKCS12', 'PEM'], help='Keystore type: JKS, PKCS12, or PEM (default: JKS)')
 parser.add_argument('--server', required=True, help='Server in host:port format')
@@ -39,15 +39,22 @@ parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handsha
 parser.add_argument('--disable-cert-verification', action='store_true', help='Disable server certificate verification (use with caution)')
 args = parser.parse_args()
 
-# Use keystore as truststore if not provided
-truststore = args.truststore if args.truststore else args.keystore
-
-# Only prompt for password if not using PEM
-if args.keystoretype == 'PEM':
-    password = None
-    print("Using PEM keystore (no password required)")
+# Handle keystore and truststore configuration
+if args.keystore:
+    # Use keystore as truststore if not provided
+    truststore = args.truststore if args.truststore else args.keystore
+    
+    # Only prompt for password if not using PEM
+    if args.keystoretype == 'PEM':
+        password = None
+        print("Using PEM keystore (no password required)")
+    else:
+        password = getpass.getpass(f'Enter {args.keystoretype} password (used for both keystore and truststore): ')
 else:
-    password = getpass.getpass(f'Enter {args.keystoretype} password (used for both keystore and truststore): ')
+    # No keystore provided - TLS without client certificate
+    print("No keystore provided - using TLS without client certificate authentication")
+    truststore = None
+    password = None
 
 # JAR paths (assume same as MQulator)
 ibm_mq_jar = os.path.abspath('./lib/com.ibm.mq.allclient-9.4.1.0.jar')
@@ -74,15 +81,29 @@ host, port = args.server.split(':')
 port = int(port)
 
 # Set up Java SSL properties
-jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", args.keystore)
-jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", args.keystoretype)
-jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
-jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
-
-# Only set passwords for non-PEM keystores
-if args.keystoretype != "PEM":
-    jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
-    jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
+if args.keystore:
+    # Client certificate authentication
+    jpype.java.lang.System.setProperty("javax.net.ssl.keyStore", args.keystore)
+    jpype.java.lang.System.setProperty("javax.net.ssl.keyStoreType", args.keystoretype)
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
+    jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
+    
+    # Only set passwords for non-PEM keystores
+    if args.keystoretype != "PEM":
+        jpype.java.lang.System.setProperty("javax.net.ssl.keyStorePassword", password)
+        jpype.java.lang.System.setProperty("javax.net.ssl.trustStorePassword", password)
+else:
+    # TLS without client certificate - use default trust store
+    print("Configuring TLS without client certificate...")
+    # Clear any keystore properties to ensure no client cert is used
+    jpype.java.lang.System.clearProperty("javax.net.ssl.keyStore")
+    jpype.java.lang.System.clearProperty("javax.net.ssl.keyStorePassword")
+    jpype.java.lang.System.clearProperty("javax.net.ssl.keyStoreType")
+    
+    # Use system default trust store unless disabled
+    if not args.disable_cert_verification:
+        # Let Java use its default trust store (cacerts)
+        print("Using system default trust store for server certificate validation")
 
 # Enable TLS debugging if requested
 if args.debug_tls:
@@ -156,7 +177,7 @@ if args.disable_cert_verification:
         
 else:
     # Normal operation - ensure truststore is properly set
-    if args.keystoretype != "PEM":
+    if args.keystore and args.keystoretype != "PEM":
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStore", truststore)
         jpype.java.lang.System.setProperty("javax.net.ssl.trustStoreType", args.keystoretype)
 
