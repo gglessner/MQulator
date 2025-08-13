@@ -307,6 +307,61 @@ MQEnvironment.port = port
 MQEnvironment.channel = args.channel
 MQEnvironment.sslCipherSuite = args.ciphersuite
 
+def check_object_type(qmgr, object_name, expected_type):
+    """Check and display the actual type of an MQ object"""
+    print(f"Checking object type for '{object_name}' (expected: {expected_type})...")
+    
+    # Try to determine actual object type
+    actual_type = "UNKNOWN"
+    additional_info = ""
+    
+    # Check if it's a queue
+    try:
+        temp_queue = qmgr.accessQueue(object_name, CMQC.MQOO_INQUIRE)
+        try:
+            attrs = temp_queue.inquire([CMQC.MQIA_Q_TYPE])
+            queue_type = attrs[CMQC.MQIA_Q_TYPE]
+            
+            if queue_type == CMQC.MQQT_LOCAL:
+                actual_type = "LOCAL QUEUE"
+            elif queue_type == CMQC.MQQT_REMOTE:
+                actual_type = "REMOTE QUEUE"
+            elif queue_type == CMQC.MQQT_ALIAS:
+                actual_type = "ALIAS QUEUE"
+            elif queue_type == CMQC.MQQT_MODEL:
+                actual_type = "MODEL QUEUE"
+            else:
+                actual_type = f"QUEUE (type {queue_type})"
+        except:
+            actual_type = "QUEUE (type unknown)"
+        finally:
+            temp_queue.close()
+    except:
+        # Not a queue, try as topic
+        try:
+            temp_topic = qmgr.accessTopic(object_name, "", CMQC.MQTOPIC_OPEN_AS_SUBSCRIPTION, CMQC.MQOO_INQUIRE)
+            actual_type = "TOPIC"
+            temp_topic.close()
+        except:
+            # Could be a topic string that doesn't exist yet (valid for pub/sub)
+            if expected_type.upper() == "TOPIC":
+                actual_type = "TOPIC (will be created)"
+                additional_info = " - Topic will be created if it doesn't exist"
+    
+    # Display results
+    if expected_type.upper() in actual_type.upper():
+        print(f"✓ Object type confirmed: {actual_type}{additional_info}")
+    else:
+        print(f"⚠ Object type mismatch!")
+        print(f"  Expected: {expected_type.upper()}")
+        print(f"  Actual:   {actual_type}{additional_info}")
+        if "QUEUE" in actual_type and expected_type.upper() == "TOPIC":
+            print("  → Try using --queue instead of --topic")
+        elif "TOPIC" in actual_type and expected_type.upper() == "QUEUE":
+            print("  → Try using --topic instead of --queue")
+    
+    return actual_type
+
 # Determine if we're working with queue or topic
 is_topic_mode = args.topic is not None
 target_name = args.topic if is_topic_mode else args.queue
@@ -325,6 +380,10 @@ print(f"Logging each raw message to its own file in {log_dir}/")
 try:
     qmgr = MQQueueManager(args.qm)
     print(f"Connected to {args.qm}")
+    
+    # Check object type before attempting to access it
+    actual_type = check_object_type(qmgr, target_name, operation_type)
+    print()  # Add blank line for readability
     
     MQMessage = jpype.JClass('com.ibm.mq.MQMessage')
     MQGetMessageOptions = jpype.JClass('com.ibm.mq.MQGetMessageOptions')

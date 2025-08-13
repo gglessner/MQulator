@@ -114,6 +114,61 @@ When an IBM MQ error occurs, all tools will attempt to extract the MQ reason cod
 
 The reason code lookup table (`MQ_REASON_CODES` dictionary) is easily extensible. If you encounter a code not listed, you can add it to the table for more descriptive error messages.
 
+## Object Type Verification
+
+Both MQbrowse.py and MQwrite.py include automatic object type verification to help prevent errors caused by object type mismatches. Before attempting to access any queue or topic, the tools will:
+
+1. **Connect to the queue manager**
+2. **Check the actual object type** using IBM MQ inquire operations
+3. **Display the verification results** with clear success or mismatch messages
+4. **Provide guidance** when mismatches are detected
+
+### Example Output
+
+**When object type matches expectations:**
+```
+Connected to QMGR1
+Checking object type for 'TEST.QUEUE' (expected: queue)...
+✓ Object type confirmed: LOCAL QUEUE
+
+Mode: Queue browsing
+```
+
+**When there's a type mismatch:**
+```
+Connected to QMGR1
+Checking object type for 'TEST.QUEUE' (expected: topic)...
+⚠ Object type mismatch!
+  Expected: TOPIC
+  Actual:   LOCAL QUEUE
+  → Try using --queue instead of --topic
+
+Mode: Topic subscription
+```
+
+**For topics that don't exist yet (valid for pub/sub):**
+```
+Connected to QMGR1
+Checking object type for '/test/topic' (expected: topic)...
+✓ Object type confirmed: TOPIC (will be created) - Topic will be created if it doesn't exist
+
+Mode: Topic subscription
+```
+
+### Supported Object Types
+
+The verification can detect and report:
+- **LOCAL QUEUE**: Standard local queues
+- **REMOTE QUEUE**: Queues on remote queue managers
+- **ALIAS QUEUE**: Queue aliases
+- **MODEL QUEUE**: Template queues for dynamic queue creation
+- **TOPIC**: Publish/subscribe topics (existing or to be created)
+
+This feature helps prevent common errors such as:
+- Using `--queue` when the object is actually a topic
+- Using `--topic` when the object is actually a queue
+- IBM MQ reason code 2397 (object type error) caused by incorrect object type assumptions
+
 ## Additional Tools
 
 ### MQbrowse.py
@@ -156,6 +211,7 @@ python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel C
 **Key Features:**
 - **Queue Mode**: Browses existing messages in a queue, then continues monitoring for new messages
 - **Topic Mode**: Creates a subscription and waits for new messages published to the topic
+- **Object Type Verification**: Automatically checks and displays the actual object type before attempting access to help prevent type mismatch errors
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--ciphersuite` to override the default TLS cipher suite.
@@ -199,6 +255,7 @@ python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CH
 **Key Features:**
 - **Queue Mode**: Writes messages directly to a specific queue
 - **Topic Mode**: Publishes messages to a topic for distribution to subscribers
+- **Object Type Verification**: Automatically checks and displays the actual object type before attempting access to help prevent type mismatch errors
 - Use the same connection arguments as MQbrowse.py.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--debug-tls` to enable verbose TLS handshake debugging for troubleshooting connection issues.
