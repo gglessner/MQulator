@@ -117,9 +117,9 @@ The reason code lookup table (`MQ_REASON_CODES` dictionary) is easily extensible
 ## Additional Tools
 
 ### MQbrowse.py
-A simple tool to browse messages from a single IBM MQ queue and log them for later replay. It connects to the specified queue and writes each raw message to its own timestamped file in the `logs` directory. Each file is named with the queue, timestamp, and message number, and contains the raw, unaltered message bytes (suitable for re-injection).
+A versatile tool that can both browse messages from IBM MQ queues and subscribe to IBM MQ topics for publish/subscribe messaging. It connects to the specified queue or topic and writes each raw message to its own timestamped file in the `logs` directory. Each file contains the raw, unaltered message bytes (suitable for re-injection).
 
-**Example usage:**
+**Queue Browsing Mode:**
 ```
 # JKS keystore (default)
 python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
@@ -132,11 +132,30 @@ python MQbrowse.py --keystore mycert.pem --keystoretype PEM --server host:port -
 
 # TLS without client certificate
 python MQbrowse.py --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1
+```
 
+**Topic Subscription Mode:**
+```
+# Subscribe to a specific topic
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --topic /Sports/Football/Scores
+
+# Subscribe with wildcards (+ for single level, # for multiple levels)
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --topic /Sports/+/Scores
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --topic /Sports/#
+
+# Topic subscription without client certificate
+python MQbrowse.py --server host:port --qm QM1 --channel CHANNEL1 --topic /News/Technology
+```
+
+**Additional Options:**
+```
 # Disable certificate verification (for testing with self-signed certs)
 python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --disable-cert-verification
 ```
 
+**Key Features:**
+- **Queue Mode**: Browses existing messages in a queue, then continues monitoring for new messages
+- **Topic Mode**: Creates a subscription and waits for new messages published to the topic
 - Use `--truststore` if you want a different truststore; otherwise, the keystore is used for both.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--ciphersuite` to override the default TLS cipher suite.
@@ -144,12 +163,12 @@ python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel C
 - Use `--disable-cert-verification` to bypass server certificate validation (useful for testing with self-signed certs).
 - The tool will prompt for the keystore password (except for PEM files, which don't require passwords).
 - The `--keystore` argument is optional - omit it for TLS without client certificate authentication.
-- Each message is logged to its own file: `logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log`.
+- Each message is logged to its own file: `logs/TARGET_NAME_YYYYMMDD_HHMMSS_NNNN.log` (queue names or topic strings with special characters converted to underscores).
 
 ### MQwrite.py
-A companion tool to write raw messages (as logged by MQbrowse.py) back to an IBM MQ queue. It reads a log file from the `logs` directory and writes its contents as a message to the specified queue. You can use it to replay individual message files captured by MQbrowse.py.
+A companion tool that can write raw messages (as logged by MQbrowse.py) to IBM MQ queues or publish them to topics. It reads a log file from the `logs` directory and writes its contents as a message to the specified queue or publishes it to a topic. You can use it to replay individual message files captured by MQbrowse.py.
 
-**Example usage:**
+**Queue Writing Mode:**
 ```
 # JKS keystore (default)
 python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log
@@ -159,11 +178,27 @@ python MQwrite.py --keystore mycert.pfx --keystoretype PKCS12 --server host:port
 
 # PEM keystore
 python MQwrite.py --keystore mycert.pem --keystoretype PEM --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/QUEUE1_YYYYMMDD_HHMMSS_NNNN.log
+```
 
+**Topic Publishing Mode:**
+```
+# Publish to a specific topic
+python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --topic /Sports/Football/Scores --file logs/message.log
+
+# Publish to different topic hierarchies
+python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --topic /News/Technology --file logs/tech_news.log
+python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --topic /Finance/StockPrices --file logs/stock_data.log
+```
+
+**Additional Options:**
+```
 # Disable certificate verification (for testing with self-signed certs)
 python MQwrite.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --file logs/message.log --disable-cert-verification
 ```
 
+**Key Features:**
+- **Queue Mode**: Writes messages directly to a specific queue
+- **Topic Mode**: Publishes messages to a topic for distribution to subscribers
 - Use the same connection arguments as MQbrowse.py.
 - Use `--keystoretype PKCS12` for PFX/P12 files, `PEM` for PEM files, or `JKS` for JKS files (default).
 - Use `--debug-tls` to enable verbose TLS handshake debugging for troubleshooting connection issues.

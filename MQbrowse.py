@@ -26,14 +26,16 @@ import getpass
 import datetime
 
 # Argument parsing
-parser = argparse.ArgumentParser(description='MQbrowse: Simple IBM MQ queue browser')
+parser = argparse.ArgumentParser(description='MQbrowse: IBM MQ queue browser and topic subscriber')
 parser.add_argument('--keystore', help='Path to JKS, PFX, or PEM keystore file (optional - omit for TLS without client cert)')
 parser.add_argument('--truststore', help='Path to JKS, PFX, or PEM truststore file (defaults to keystore if not provided)')
 parser.add_argument('--keystoretype', default='JKS', choices=['JKS', 'PKCS12', 'PEM'], help='Keystore type: JKS, PKCS12, or PEM (default: JKS)')
 parser.add_argument('--server', required=True, help='Server in host:port format')
 parser.add_argument('--qm', required=True, help='Queue manager name')
 parser.add_argument('--channel', required=True, help='Channel name')
-parser.add_argument('--queue', required=True, help='Queue name')
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('--queue', help='Queue name')
+group.add_argument('--topic', help='Topic string for publish/subscribe messaging')
 parser.add_argument('--ciphersuite', default='TLS_RSA_WITH_AES_256_CBC_SHA256', help='TLS cipher suite (default: TLS_RSA_WITH_AES_256_CBC_SHA256)')
 parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handshake debugging (verbose output)')
 parser.add_argument('--disable-cert-verification', action='store_true', help='Disable server certificate verification (use with caution)')
@@ -305,7 +307,13 @@ MQEnvironment.port = port
 MQEnvironment.channel = args.channel
 MQEnvironment.sslCipherSuite = args.ciphersuite
 
+# Determine if we're working with queue or topic
+is_topic_mode = args.topic is not None
+target_name = args.topic if is_topic_mode else args.queue
+operation_type = "topic" if is_topic_mode else "queue"
+
 print(f"Connecting to {args.qm} at {args.server} on channel {args.channel} ...")
+print(f"Mode: {'Topic subscription' if is_topic_mode else 'Queue browsing'}")
 
 # Prepare log directory
 log_dir = 'logs'
@@ -317,31 +325,68 @@ print(f"Logging each raw message to its own file in {log_dir}/")
 try:
     qmgr = MQQueueManager(args.qm)
     print(f"Connected to {args.qm}")
-    open_opts = CMQC.MQOO_BROWSE | CMQC.MQOO_INPUT_SHARED
-    queue_obj = qmgr.accessQueue(args.queue, open_opts)
-    print(f"Browsing queue: {args.queue} (Ctrl+C to exit)")
+    
     MQMessage = jpype.JClass('com.ibm.mq.MQMessage')
     MQGetMessageOptions = jpype.JClass('com.ibm.mq.MQGetMessageOptions')
-    gmo = MQGetMessageOptions()
-    gmo.options = CMQC.MQGMO_BROWSE_FIRST | CMQC.MQGMO_NO_WAIT
+    
+    if is_topic_mode:
+        # Topic subscription mode
+        MQTopic = jpype.JClass('com.ibm.mq.MQTopic')
+        MQSubscription = jpype.JClass('com.ibm.mq.MQSubscription')
+        
+        # Create topic object
+        topic_obj = qmgr.accessTopic(args.topic, None, CMQC.MQTOPIC_OPEN_AS_SUBSCRIPTION, CMQC.MQOO_INPUT_SHARED)
+        print(f"Subscribed to topic: {args.topic} (Ctrl+C to exit)")
+        
+        # Set up message options for topic
+        gmo = MQGetMessageOptions()
+        gmo.options = CMQC.MQGMO_WAIT | CMQC.MQGMO_NO_SYNCPOINT
+        gmo.waitInterval = 5000  # 5 second wait
+        
+        source_obj = topic_obj
+        
+    else:
+        # Queue browsing mode
+        open_opts = CMQC.MQOO_BROWSE | CMQC.MQOO_INPUT_SHARED
+        queue_obj = qmgr.accessQueue(args.queue, open_opts)
+        print(f"Browsing queue: {args.queue} (Ctrl+C to exit)")
+        
+        # Set up message options for queue browsing
+        gmo = MQGetMessageOptions()
+        gmo.options = CMQC.MQGMO_BROWSE_FIRST | CMQC.MQGMO_NO_WAIT
+        
+        source_obj = queue_obj
+    
+    # Message reading loop
     while True:
         try:
             mqmsg = MQMessage()
-            queue_obj.get(mqmsg, gmo)
+            source_obj.get(mqmsg, gmo)
             msg_bytes = mqmsg.readBytes(mqmsg.getDataLength())
             msg_counter += 1
+            
+            # Create filename based on mode
+            safe_name = target_name.replace('/', '_').replace('\\', '_')
             msg_filename = os.path.join(
                 log_dir,
-                f"{args.queue}_{session_time}_{msg_counter:04d}.log"
+                f"{safe_name}_{session_time}_{msg_counter:04d}.log"
             )
+            
             with open(msg_filename, 'wb') as log_file:
                 log_file.write(msg_bytes)
             print(f"Message {msg_counter}: {msg_filename} ({len(msg_bytes)} bytes)")
-            # After first message, switch to BROWSE_NEXT
-            gmo.options = CMQC.MQGMO_BROWSE_NEXT | CMQC.MQGMO_NO_WAIT
+            
+            # For queue browsing, switch to BROWSE_NEXT after first message
+            if not is_topic_mode and gmo.options & CMQC.MQGMO_BROWSE_FIRST:
+                gmo.options = CMQC.MQGMO_BROWSE_NEXT | CMQC.MQGMO_NO_WAIT
+                
         except Exception as e:
-            # No more messages, wait a bit then try again
-            time.sleep(1)
+            if is_topic_mode:
+                # For topics, continue waiting for new messages
+                continue
+            else:
+                # For queues, no more messages, wait a bit then try again
+                time.sleep(1)
 except KeyboardInterrupt:
     print("\nExiting on user request.")
 except Exception as e:
@@ -364,12 +409,11 @@ except Exception as e:
         print(f"Could not extract reason code from exception: {str(e)}")
 finally:
     try:
-        # The original code had log_file.close() here, but log_file is not defined in this scope.
-        # Assuming the intent was to close the last opened log file if msg_counter > 0.
-        # However, the original code had log_file.close() which was not defined.
-        # I will remove the line as it's not directly related to the new_code and would cause an error.
-        # If the user wants to close the last file, they should manage it.
-        # queue_obj.close()
-        qmgr.disconnect()
+        # Close the appropriate object
+        if 'source_obj' in locals():
+            source_obj.close()
+        if 'qmgr' in locals():
+            qmgr.disconnect()
+            print(f"Disconnected from {args.qm}")
     except:
         pass 

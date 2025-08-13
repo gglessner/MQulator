@@ -23,14 +23,16 @@ import os
 import sys
 import getpass
 
-parser = argparse.ArgumentParser(description='MQwrite: Write raw messages from a file to an IBM MQ queue')
+parser = argparse.ArgumentParser(description='MQwrite: Write raw messages from a file to IBM MQ queues or publish to topics')
 parser.add_argument('--keystore', required=True, help='Path to JKS, PFX, or PEM keystore file')
 parser.add_argument('--truststore', help='Path to JKS, PFX, or PEM truststore file (defaults to keystore if not provided)')
 parser.add_argument('--keystoretype', default='JKS', choices=['JKS', 'PKCS12', 'PEM'], help='Keystore type: JKS, PKCS12, or PEM (default: JKS)')
 parser.add_argument('--server', required=True, help='Server in host:port format')
 parser.add_argument('--qm', required=True, help='Queue manager name')
 parser.add_argument('--channel', required=True, help='Channel name')
-parser.add_argument('--queue', required=True, help='Queue name')
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('--queue', help='Queue name')
+group.add_argument('--topic', help='Topic string for publish/subscribe messaging')
 parser.add_argument('--ciphersuite', default='TLS_RSA_WITH_AES_256_CBC_SHA256', help='TLS cipher suite (default: TLS_RSA_WITH_AES_256_CBC_SHA256)')
 parser.add_argument('--file', required=True, help='File containing raw messages to write (as produced by MQbrowse.py)')
 parser.add_argument('--debug-tls', action='store_true', help='Enable TLS handshake debugging (verbose output)')
@@ -268,16 +270,32 @@ MQEnvironment.port = port
 MQEnvironment.channel = args.channel
 MQEnvironment.sslCipherSuite = args.ciphersuite
 
+# Determine if we're working with queue or topic
+is_topic_mode = args.topic is not None
+target_name = args.topic if is_topic_mode else args.queue
+operation_type = "topic" if is_topic_mode else "queue"
+
 print(f"Connecting to {args.qm} at {args.server} on channel {args.channel} ...")
+print(f"Mode: {'Topic publishing' if is_topic_mode else 'Queue writing'}")
 
 try:
     qmgr = MQQueueManager(args.qm)
     print(f"Connected to {args.qm}")
-    open_opts = CMQC.MQOO_OUTPUT
-    queue_obj = qmgr.accessQueue(args.queue, open_opts)
-    print(f"Writing messages from {args.file} to queue: {args.queue}")
+    
+    if is_topic_mode:
+        # Topic publishing mode
+        topic_obj = qmgr.accessTopic(args.topic, None, CMQC.MQTOPIC_OPEN_AS_PUBLICATION, CMQC.MQOO_OUTPUT)
+        print(f"Publishing messages from {args.file} to topic: {args.topic}")
+        target_obj = topic_obj
+    else:
+        # Queue writing mode
+        open_opts = CMQC.MQOO_OUTPUT
+        queue_obj = qmgr.accessQueue(args.queue, open_opts)
+        print(f"Writing messages from {args.file} to queue: {args.queue}")
+        target_obj = queue_obj
     MQMessage = jpype.JClass('com.ibm.mq.MQMessage')
     MQPutMessageOptions = jpype.JClass('com.ibm.mq.MQPutMessageOptions')
+    
     with open(args.file, 'rb') as f:
         data = f.read()
         offset = 0
@@ -288,13 +306,20 @@ try:
             msg_bytes = data[offset:]
             mqmsg = MQMessage()
             mqmsg.writeBytes(msg_bytes)
-            queue_obj.put(mqmsg, MQPutMessageOptions())
+            
+            # Use the unified target object (works for both queues and topics)
+            target_obj.put(mqmsg, MQPutMessageOptions())
             msg_num += 1
-            print(f"Wrote message {msg_num} ({len(msg_bytes)} bytes)")
+            
+            action_verb = "Published" if is_topic_mode else "Wrote"
+            print(f"{action_verb} message {msg_num} ({len(msg_bytes)} bytes)")
             break  # Only one message unless a delimiter/length is implemented
-    queue_obj.close()
+    
+    target_obj.close()
     qmgr.disconnect()
-    print(f"All messages written to {args.queue}")
+    
+    completion_msg = f"All messages published to topic: {args.topic}" if is_topic_mode else f"All messages written to queue: {args.queue}"
+    print(completion_msg)
 except Exception as e:
     print(f"Error: {e}")
     # Try to extract and decode MQ reason code
