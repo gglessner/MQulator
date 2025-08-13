@@ -309,6 +309,9 @@ MQEnvironment.sslCipherSuite = args.ciphersuite
 
 def check_object_type(qmgr, object_name, expected_type):
     """Check and display the actual type of an MQ object"""
+    print(f"=" * 60)
+    print(f"OBJECT TYPE VERIFICATION")
+    print(f"=" * 60)
     print(f"Checking object type for '{object_name}' (expected: {expected_type})...")
     
     # Try to determine actual object type
@@ -349,17 +352,22 @@ def check_object_type(qmgr, object_name, expected_type):
                 additional_info = " - Topic will be created if it doesn't exist"
     
     # Display results
-    if expected_type.upper() in actual_type.upper():
-        print(f"✓ Object type confirmed: {actual_type}{additional_info}")
-    else:
-        print(f"⚠ Object type mismatch!")
-        print(f"  Expected: {expected_type.upper()}")
-        print(f"  Actual:   {actual_type}{additional_info}")
-        if "QUEUE" in actual_type and expected_type.upper() == "TOPIC":
-            print("  → Try using --queue instead of --topic")
-        elif "TOPIC" in actual_type and expected_type.upper() == "QUEUE":
-            print("  → Try using --topic instead of --queue")
+    try:
+        if expected_type.upper() in actual_type.upper():
+            print(f"✓ Object type confirmed: {actual_type}{additional_info}")
+        else:
+            print(f"⚠ Object type mismatch!")
+            print(f"  Expected: {expected_type.upper()}")
+            print(f"  Actual:   {actual_type}{additional_info}")
+            if "QUEUE" in actual_type and expected_type.upper() == "TOPIC":
+                print("  → Try using --queue instead of --topic")
+            elif "TOPIC" in actual_type and expected_type.upper() == "QUEUE":
+                print("  → Try using --topic instead of --queue")
+    except Exception as e:
+        print(f"⚠ Error displaying object type results: {e}")
+        print(f"Raw values - Expected: {expected_type}, Actual: {actual_type}")
     
+    print(f"=" * 60)
     return actual_type
 
 # Determine if we're working with queue or topic
@@ -382,8 +390,14 @@ try:
     print(f"Connected to {args.qm}")
     
     # Check object type before attempting to access it
-    actual_type = check_object_type(qmgr, target_name, operation_type)
-    print()  # Add blank line for readability
+    try:
+        actual_type = check_object_type(qmgr, target_name, operation_type)
+        print()  # Add blank line for readability
+    except Exception as e:
+        print(f"ERROR: Object type checking failed: {e}")
+        print(f"Continuing anyway...")
+        actual_type = "UNKNOWN"
+        print()
     
     MQMessage = jpype.JClass('com.ibm.mq.MQMessage')
     MQGetMessageOptions = jpype.JClass('com.ibm.mq.MQGetMessageOptions')
