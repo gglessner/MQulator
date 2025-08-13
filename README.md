@@ -99,7 +99,7 @@ Optional:
 
 ## Error Handling and Reason Code Lookup
 
-When an IBM MQ error occurs, all tools (MQulator, MQbrowse, and MQwrite) will attempt to extract the MQ reason code from the exception and print a comprehensive, human-readable explanation. The tools include **74 common IBM MQ reason codes** organized by category:
+When an IBM MQ error occurs, all tools will attempt to extract the MQ reason code from the exception and print a human-readable explanation. The tools include **74 common IBM MQ reason codes** organized by category:
 
 - **Connection and communication errors** (e.g., 2009 = MQRC_CONNECTION_BROKEN, 2538 = MQRC_HOST_NOT_AVAILABLE)
 - **Authentication and authorization errors** (e.g., 2035 = MQRC_NOT_AUTHORIZED, 2089 = MQRC_SECURITY_ERROR)
@@ -109,7 +109,11 @@ When an IBM MQ error occurs, all tools (MQulator, MQbrowse, and MQwrite) will at
 - **SSL/TLS errors** (e.g., 2548 = MQRC_SSL_INITIALIZATION_ERROR, 2552 = MQRC_SSL_PEER_NAME_MISMATCH)
 - **System and resource errors** (e.g., 2069 = MQRC_STORAGE_NOT_AVAILABLE, 2195 = MQRC_UNEXPECTED_ERROR)
 
-The comprehensive reason code lookup table (`MQ_REASON_CODES` dictionary) is identical across all three tools and easily extensible. If you encounter a code not listed, you can add it to the table for more descriptive error messages.
+**Error Message Detail Levels:**
+- **MQulator.py** and **MQwrite.py**: Provide comprehensive explanations with detailed troubleshooting guidance for each reason code
+- **MQbrowse.py**: Displays the standard IBM MQ constant names for lighter, faster error reporting
+
+The reason code lookup table (`MQ_REASON_CODES` dictionary) is easily extensible. If you encounter a code not listed, you can add it to the table for more descriptive error messages.
 
 ## Additional Tools
 
