@@ -109,9 +109,8 @@ When an IBM MQ error occurs, all tools will attempt to extract the MQ reason cod
 - **SSL/TLS errors** (e.g., 2548 = MQRC_SSL_INITIALIZATION_ERROR, 2552 = MQRC_SSL_PEER_NAME_MISMATCH)
 - **System and resource errors** (e.g., 2069 = MQRC_STORAGE_NOT_AVAILABLE, 2195 = MQRC_UNEXPECTED_ERROR)
 
-**Error Message Detail Levels:**
-- **MQulator.py** and **MQwrite.py**: Provide comprehensive explanations with detailed troubleshooting guidance for each reason code
-- **MQbrowse.py**: Displays the standard IBM MQ constant names for lighter, faster error reporting
+**Comprehensive Error Explanations:**
+- **All tools** (MQulator.py, MQbrowse.py, and MQwrite.py): Provide comprehensive explanations with detailed troubleshooting guidance for each reason code
 
 The reason code lookup table (`MQ_REASON_CODES` dictionary) is easily extensible. If you encounter a code not listed, you can add it to the table for more descriptive error messages.
 
