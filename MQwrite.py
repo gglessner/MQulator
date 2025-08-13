@@ -311,3 +311,5 @@ except Exception as e:
     if reason_code is not None:
         reason_text = MQ_REASON_CODES.get(reason_code, 'Unknown reason code')
         print(f"IBM MQ Reason Code {reason_code}: {reason_text}") 
+    else:
+        print(f"Could not extract reason code from exception: {str(e)}") 
