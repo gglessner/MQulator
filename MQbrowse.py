@@ -334,8 +334,8 @@ try:
         MQTopic = jpype.JClass('com.ibm.mq.MQTopic')
         MQSubscription = jpype.JClass('com.ibm.mq.MQSubscription')
         
-        # Create topic object
-        topic_obj = qmgr.accessTopic(args.topic, None, CMQC.MQTOPIC_OPEN_AS_SUBSCRIPTION, CMQC.MQOO_INPUT_SHARED)
+        # Create topic object for subscription
+        topic_obj = qmgr.accessTopic(args.topic, "", CMQC.MQTOPIC_OPEN_AS_SUBSCRIPTION, CMQC.MQOO_INPUT_SHARED)
         print(f"Subscribed to topic: {args.topic} (Ctrl+C to exit)")
         
         # Set up message options for topic

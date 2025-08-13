@@ -284,7 +284,7 @@ try:
     
     if is_topic_mode:
         # Topic publishing mode
-        topic_obj = qmgr.accessTopic(args.topic, None, CMQC.MQTOPIC_OPEN_AS_PUBLICATION, CMQC.MQOO_OUTPUT)
+        topic_obj = qmgr.accessTopic(args.topic, "", CMQC.MQTOPIC_OPEN_AS_PUBLICATION, CMQC.MQOO_OUTPUT)
         print(f"Publishing messages from {args.file} to topic: {args.topic}")
         target_obj = topic_obj
     else:
