@@ -1,1 +1,8 @@
-jpype1 
+# Requirements for IBM MQ tools
+jpype1>=1.4.0
+requests>=2.28.0
+urllib3>=1.26.0
+
+# Note: For JKS/PKCS#12 certificate support in MQrest.py:
+# - OpenSSL must be installed and available in PATH
+# - Java keytool must be available in PATH (for JKS conversion)

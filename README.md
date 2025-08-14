@@ -11,12 +11,22 @@ MQulator is a Python tool for browsing messages from IBM MQ queues using the IBM
 - Prints detailed status and browsed messages
 
 ## Requirements
+
+### For Java-based tools (MQulator.py, MQbrowse.py, MQwrite.py):
 - Python 3.7+
 - Java (JRE/JDK) installed and accessible in your PATH
 - IBM MQ Java client JAR: `mq.allclient-9.4.1.0.jar`
 - JSON JAR: `json-20240303.jar`
 - JMS API JAR: `javax.jms-api-2.0.1.jar`
 - Python packages: see `requirements.txt`
+
+### For REST API tools (MQrest.py, MQbridge.py):
+- Python 3.6+
+- Python packages: `requests`, `urllib3`
+- **No Java required!**
+- For JKS/PKCS#12 certificate support:
+  - OpenSSL (for PKCS#12 conversion)
+  - Java keytool (for JKS conversion)
 
 ## Where to get the .jar files
 - **IBM MQ allclient JAR**: Download from IBM's official site (requires IBM ID):
@@ -169,6 +179,28 @@ This feature helps prevent common errors such as:
 - Using `--topic` when the object is actually a queue
 - IBM MQ reason code 2397 (object type error) caused by incorrect object type assumptions
 
+## Tool Collection
+
+MQulator now includes **5 different tools** for various IBM MQ interaction scenarios:
+
+1. **MQulator.py** - Automated combination testing (original tool)
+2. **MQbrowse.py** - Java-based queue browser and topic subscriber  
+3. **MQwrite.py** - Java-based message writer and topic publisher
+4. **MQrest.py** - REST API client (simpler, no Java required)
+5. **MQbridge.py** - HTTP Bridge client (lightweight protocol)
+
+### Tool Selection Guide
+
+| Use Case | Recommended Tool | Why |
+|----------|------------------|-----|
+| **Security Testing** | MQulator.py | Tests all parameter combinations |
+| **Production Browsing** | MQbrowse.py | Full-featured, non-destructive |
+| **Simple Messaging** | MQrest.py | No Java setup required |
+| **Legacy/Firewall** | MQbridge.py | Simple HTTP protocol |
+| **Message Replay** | MQwrite.py | Exact message reproduction |
+
+---
+
 ## Additional Tools
 
 ### MQbrowse.py
@@ -284,6 +316,119 @@ python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel C
 
 # Combine debugging with certificate bypass
 python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --debug-tls --disable-cert-verification
+```
+
+### MQrest.py
+A modern REST API client that provides a **much simpler alternative** to the Java-based tools. Uses standard HTTP requests instead of complex Java libraries, making it easier to deploy and debug.
+
+**Key Advantages:**
+- **No Java required** - Just `pip install requests`
+- **No JAR files** to manage
+- **Better error handling** - HTTP status codes + JSON responses
+- **Easier debugging** - Standard HTTP tools work
+- **Cross-platform** - Works anywhere Python works
+
+**Certificate Support:**
+- **Auto-detection** - Supports JKS, PKCS#12, and PEM formats
+- **Auto-conversion** - Converts JKS/PKCS#12 to temporary PEM files
+- **Secure cleanup** - Temporary files are automatically deleted
+
+**Operations Supported:**
+- ✅ **browse** - Browse queue messages (non-destructive)
+- ✅ **get** - Get/consume messages from queues  
+- ✅ **put** - Put messages to queues
+- ✅ **publish** - Publish messages to topics
+- ✅ **subscribe** - Subscribe to topics
+- ✅ **qinfo** - Get queue information
+- ✅ **qminfo** - Get queue manager information
+
+**Usage Examples:**
+```bash
+# Browse queue with JKS certificate
+python MQrest.py --cert keystore.jks --cert-password mypass --server https://mqweb:9443 --qmgr QM1 --operation browse --queue TESTQ
+
+# Put message with PKCS#12 certificate
+python MQrest.py --cert client.pfx --cert-password secret --server https://mqweb:9443 --qmgr QM1 --operation put --queue TESTQ --message "Hello World"
+
+# Subscribe to topic with basic authentication
+python MQrest.py --username admin --password secret --server https://mqweb:9443 --qmgr QM1 --operation subscribe --topic /news/alerts
+
+# Get queue information with PEM certificates
+python MQrest.py --cert client.crt --key client.key --server https://mqweb:9443 --qmgr QM1 --operation qinfo --queue SYSTEM.DEAD.LETTER.QUEUE
+```
+
+**Requirements:**
+- IBM MQ 9.0.5+ with mqweb server enabled
+- REST API enabled on the queue manager
+- Python 3.6+ with `requests` library
+
+### MQbridge.py
+A lightweight HTTP Bridge client designed for simple messaging scenarios and environments where the full REST API isn't available or needed.
+
+**Key Features:**
+- **Simple HTTP protocol** - Just GET/POST requests
+- **Firewall friendly** - Standard HTTP traffic
+- **Legacy compatible** - Works with older MQ versions
+- **Same certificate support** - JKS, PKCS#12, and PEM formats
+
+**Operations Supported:**
+- ✅ **get** - Get/consume messages from queues
+- ✅ **put** - Put messages to queues  
+- ✅ **publish** - Publish messages to topics
+- ✅ **subscribe** - Subscribe to topics
+- ❌ **browse** - Not supported (HTTP Bridge limitation)
+
+**Usage Examples:**
+```bash
+# Get message with JKS certificate
+python MQbridge.py --cert keystore.jks --cert-password mypass --server http://bridge:8080 --qmgr QM1 --operation get --queue REQUEST.QUEUE
+
+# Put message with basic authentication
+python MQbridge.py --username bridgeuser --password secret --server http://bridge:8080 --qmgr QM1 --operation put --queue RESPONSE.QUEUE --message "Processing complete"
+
+# Subscribe to topic with PKCS#12 certificate
+python MQbridge.py --cert client.pfx --cert-password secret --server https://bridge:8443 --qmgr QM1 --operation subscribe --topic /system/alerts
+
+# Custom bridge path
+python MQbridge.py --bridge-path /mq/bridge --username admin --password secret --server http://custom:8080 --qmgr QM1 --operation get --queue TESTQ
+```
+
+**HTTP Bridge vs REST API:**
+| Feature | MQrest.py (REST API) | MQbridge.py (HTTP Bridge) |
+|---------|---------------------|---------------------------|
+| **Protocol** | IBM MQ REST API v3 | Simple HTTP Bridge |
+| **Browse Support** | ✅ Non-destructive | ❌ Not available |
+| **Queue Info** | ✅ Admin operations | ❌ Message ops only |
+| **Complexity** | Medium | Low |
+| **Requirements** | mqweb server | HTTP Bridge server |
+
+## Enhanced Error Analysis
+
+All tools now support **enhanced error analysis** with the `--enhanced-errors` flag, which categorizes errors as either:
+
+- **🏢 Remote End Errors** (Queue Manager/Server issues)
+- **💻 Client Side Errors** (Local application/configuration issues)
+
+This helps immediately identify whether an error requires server-side investigation or client-side fixes.
+
+**Example with enhanced errors:**
+```bash
+python MQbrowse.py --keystore mycert.jks --server host:port --qm QM1 --channel CHANNEL1 --queue QUEUE1 --enhanced-errors
+```
+
+**Sample output:**
+```
+Error: MQJE001: Completion Code 2, Reason 2059
+IBM MQ Reason Code 2059: MQRC_Q_MGR_NOT_AVAILABLE - The queue manager is not available or not running.
+
+============================================================
+ERROR LOCATION ANALYSIS
+============================================================
+🏢 REMOTE END ERROR (Queue Manager/Server-side issue)
+Location: IBM MQ Queue Manager or Server
+Action:   Contact MQ administrator or check server status
+Details:  Queue manager availability issue
+============================================================
 ```
 
 These tools are useful for capturing and replaying MQ traffic for testing, troubleshooting, or security research.
